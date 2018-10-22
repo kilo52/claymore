@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.kilo52.claymore</groupId>
   <artifactId>claymore</artifactId>
-  <version>1.0.0</version>
+  <version>1.1.0</version>
   <name>Claymore</name>
   <description>This is the open source Claymore library which provides additional core libraries for Java</description>
   <url>https://github.com/kilo52/claymore</url>

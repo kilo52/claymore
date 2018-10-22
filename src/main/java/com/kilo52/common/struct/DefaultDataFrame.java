@@ -1084,7 +1084,7 @@ public class DefaultDataFrame implements DataFrame {
 		return indexOfAll(enforceName(colName), regex);
 	}
 	
-	public DataFrame findAll(final int col, final String regex){
+	public DataFrame filter(final int col, final String regex){
 		if((next == -1) || (col < 0) || (col >= columns.length)){
 			throw new DataFrameException("Invalid column index: "+col);
 		}
@@ -1092,9 +1092,6 @@ public class DefaultDataFrame implements DataFrame {
 			throw new DataFrameException("Arg must not be null or empty");
 		}
 		final int[] indices = indexOfAll(col, regex);
-		if(indices == null){
-			return null;
-		}
 		final DataFrame df = new DefaultDataFrame();
 		try{
 			for(final Column c : columns){
@@ -1103,8 +1100,10 @@ public class DefaultDataFrame implements DataFrame {
 		}catch(InstantiationException | IllegalAccessException ex){
 			throw new DataFrameException("Unable to instantiate columns");
 		}
-		for(int i=0; i<indices.length; ++i){
-			df.addRow(getRowAt(indices[i]));
+		if(indices != null){
+			for(int i=0; i<indices.length; ++i){
+				df.addRow(getRowAt(indices[i]));
+			}
 		}
 		if(names != null){
 			df.setColumnNames(getColumnNames());
@@ -1112,8 +1111,28 @@ public class DefaultDataFrame implements DataFrame {
 		return df;
 	}
 	
+	public DataFrame filter(final String colName, final String regex){
+		return filter(enforceName(colName), regex);
+	}
+	
+	/**
+	 * @deprecated Renamed to {@link #filter(int, String)}.<br>
+	 * 			   This method has been replaced and will be removed in a future release
+	 * @param col The index of the column to search
+	 * @param regex The regular expression to search for
+	 */
+	public DataFrame findAll(final int col, final String regex){
+		return filter(col, regex);
+	}
+	
+	/**
+	 * @deprecated Renamed to {@link #filter(String, String)}.<br>
+	 * 			   This method has been replaced and will be removed in a future release
+	 * @param colName The name of the Column to search
+	 * @param regex The regular expression to search for
+	 */
 	public DataFrame findAll(final String colName, final String regex){
-		return findAll(enforceName(colName), regex);
+		return filter(enforceName(colName), regex);
 	}
 	
 	public double average(final int col){

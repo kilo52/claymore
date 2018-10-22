@@ -291,9 +291,11 @@ public class CSVFileReader {
 	 * The default separator is a comma (','). 
 	 * 
 	 * @param separator The character to be used as a separator
+	 * @return This CSVFileReader instance
 	 */
-	public void useSeparator(final char separator){
+	public CSVFileReader useSeparator(final char separator){
 		this.separator = String.valueOf(separator);
+		return this;
 	}
 	
 	/**
@@ -302,15 +304,18 @@ public class CSVFileReader {
 	 * For example: <code>"UTF-8"</code>
 	 * 
 	 * @param charset The charset to be used when reading
+	 * @return This CSVFileReader instance
 	 * @throws UnsupportedEncodingException When the specified charset is
 	 * 										invalid or not supported
 	 * @throws FileNotFoundException If the file was not found or represents a directory
 	 */
-	public void useCharset(final String charset) 
+	public CSVFileReader useCharset(final String charset) 
 			throws UnsupportedEncodingException, FileNotFoundException{
 		
 		 this.reader = new BufferedReader(
 				 new InputStreamReader(new FileInputStream(this.file), charset));
+		 
+		 return this;
 	}
 	
 	/**
@@ -328,13 +333,15 @@ public class CSVFileReader {
 	 * and the third column as floats
 	 * 
 	 * @param types The types corresponding to each column
+	 * @return This CSVFileReader instance
 	 */
-	public void useColumnTypes(Class<?>... types){
+	public CSVFileReader useColumnTypes(Class<?>... types){
 		if((types != null) && !isNullType(types[0])){
 			inferColumnTypes(types);
 		}else{
 			this.types = null;
 		}
+		return this;
 	}
 	
 	/**

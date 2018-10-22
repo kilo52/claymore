@@ -149,9 +149,11 @@ public class CSVFileWriter {
 	 * The default separator is a comma (','). 
 	 * 
 	 * @param separator The character to be used as a separator
+	 * @return This CSVFileWriter instance
 	 */
-	public void useSeparator(final char separator){
+	public CSVFileWriter useSeparator(final char separator){
 		this.separator = String.valueOf(separator);
+		return this;
 	}
 	
 	/**
@@ -160,16 +162,19 @@ public class CSVFileWriter {
 	 * For example: <code>"UTF-8"</code>
 	 * 
 	 * @param charset The charset to be used when writing
+	 * @return This CSVFileWriter instance
 	 * @throws UnsupportedEncodingException When the specified charset is
 	 * 										invalid or not supported
 	 * @throws FileNotFoundException If the file represents a directory, cannot be 
 	 * 								 created or opened for some reason
 	 */
-	public void useCharset(final String charset) 
+	public CSVFileWriter useCharset(final String charset) 
 			throws UnsupportedEncodingException, FileNotFoundException{
 		
 		 this.writer = new BufferedWriter(
 				 new OutputStreamWriter(new FileOutputStream(this.file), charset));
+		 
+		 return this;
 	}
 	
 	/**
