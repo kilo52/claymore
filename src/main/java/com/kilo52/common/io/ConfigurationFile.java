@@ -77,6 +77,18 @@ public class ConfigurationFile implements Iterable<ConfigurationFile.Section>{
 	}
 	
 	/**
+	 * Removes the configuration section with the specified name.<br>
+	 * The entire content of that section will be removed
+	 * 
+	 * @param name The name of the section to remove
+	 */
+	public void removeSection(final String name){
+		if(sections.remove(name) != null){
+			this.content.remove(name);
+		}
+	}
+	
+	/**
 	 * Gets a {@link Date} object indicating the date and time the file this 
 	 * <code>ConfigurationFile</code> object is associated with was last modified.<br>
 	 * The date and time returned by this method is according to any modification of the 
@@ -197,6 +209,17 @@ public class ConfigurationFile implements Iterable<ConfigurationFile.Section>{
 		public void set(final String key, final String value){
 			if(configs.put(key, value) == null){
 				this.sectionContent.add(key);
+			}
+		}
+		
+		/**
+		 * Removes the configuration with the specified key from this section
+		 * 
+		 * @param key The key of the configuration to remove
+		 */
+		public void remove(final String key){
+			if(configs.remove(key) != null){
+				this.sectionContent.remove(key);
 			}
 		}
 

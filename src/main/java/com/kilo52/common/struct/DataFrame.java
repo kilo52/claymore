@@ -795,7 +795,7 @@ public interface DataFrame extends Cloneable, Serializable, Iterable<Column> {
 	 * @param col The index of the column to search 
 	 * @param regex The regular expression to search for
 	 * @return A sub-DataFrame containing all rows that match the given regular expression.
-	 * 		   <br>Returns an empty DataFrame if nothing in the column matches the given regular expression
+	 *         <br>Returns an empty DataFrame if nothing in the column matches the given regular expression
 	 */
 	public DataFrame filter(int col, String regex);
 	
@@ -808,13 +808,13 @@ public interface DataFrame extends Cloneable, Serializable, Iterable<Column> {
 	 * @param colName The name of the Column to search
 	 * @param regex The regular expression to search for
 	 * @return A sub-DataFrame containing all rows that match the given regular expression.
-	 * 		   <br>Returns an empty DataFrame if nothing in the column matches the given regular expression
+	 *         <br>Returns an empty DataFrame if nothing in the column matches the given regular expression
 	 */
 	public DataFrame filter(String colName, String regex);
 	
 	/**
 	 * @deprecated Renamed to {@link #filter(int, String)}.<br>
-	 * 			   This method has been replaced and will be removed in a future release
+	 *             This method has been replaced and will be removed in a future release
 	 * @param col The index of the column to search
 	 * @param regex The regular expression to search for
 	 */
@@ -822,7 +822,7 @@ public interface DataFrame extends Cloneable, Serializable, Iterable<Column> {
 	
 	/**
 	 * @deprecated Renamed to {@link #filter(String, String)}.<br>
-	 * 			   This method has been replaced and will be removed in a future release
+	 *             This method has been replaced and will be removed in a future release
 	 * @param colName The name of the Column to search
 	 * @param regex The regular expression to search for
 	 */

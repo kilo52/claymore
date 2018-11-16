@@ -72,7 +72,7 @@ public class ConfigurationFileHandler {
 		final ConfigurationFile configs = new ConfigurationFile();
 		final BufferedReader reader = new BufferedReader(new FileReader(file));
 		String line = "";
-		Section section = new Section();;
+		Section section = new Section();
 		boolean inSection = false;
 		int i = 0;
 		while((line = reader.readLine()) != null){

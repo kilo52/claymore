@@ -612,17 +612,21 @@ public class DataFrameSerializer {
 		
 		switch(dfType){
 		case "default":
-			if(columnNames != null){
-				df = new DefaultDataFrame(columnNames, columns);
-			}else{
+			if(columns.length == 0){
+				df = new DefaultDataFrame();
+			}else if(columnNames == null){
 				df = new DefaultDataFrame(columns);
+			}else{
+				df = new DefaultDataFrame(columnNames, columns);
 			}
 			break;
 		case "nullable":
-			if(columnNames != null){
-				df = new NullableDataFrame(columnNames, columns);
-			}else{
+			if(columns.length == 0){
+				df = new NullableDataFrame();
+			}else if(columnNames == null){
 				df = new NullableDataFrame(columns);
+			}else{
+				df = new NullableDataFrame(columnNames, columns);
 			}
 			break;
 		}
