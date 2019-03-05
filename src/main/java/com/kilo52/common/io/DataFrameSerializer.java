@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2018 Phil Gaiser
+ * Copyright (C) 2019 Phil Gaiser
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -504,8 +504,8 @@ public class DataFrameSerializer {
 				case "CharColumn":
 					final char[] charCol = new char[rows];
 					for(int k=0; k<rows; ++k){
-						while((b = bytes[++i2]) != ',');
-						charCol[k] = (char)bytes[i2-1];
+						while((b = bytes[++i2]) != ',' || ((bytes[i2-1] == '<') && (bytes[i2+1] == '>')));
+						charCol[k] = new String(copyBytes(bytes, i1, i2)).replace("<,>", ",").charAt(0);
 						i1 = i2+1;
 					}
 					columns[j] = new CharColumn(charCol);
@@ -598,9 +598,14 @@ public class DataFrameSerializer {
 				case "NullableCharColumn":
 					final Character[] charCol = new Character[rows];
 					for(int k=0; k<rows; ++k){
-						while((b = bytes[++i2]) != ',');
+						while((b = bytes[++i2]) != ',' || ((bytes[i2-1] == '<') && (bytes[i2+1] == '>')));
 						final String s = new String(copyBytes(bytes, i1, i2));
-						charCol[k] = (!s.equals("null") ? (char)bytes[i2-1] : null);
+						charCol[k] = (!s.equals("null") 
+								? new String(copyBytes(bytes, i1, i2))
+										.replace("<,>", ",")
+										.charAt(0) 
+								: null);
+						
 						i1 = i2+1;
 					}
 					columns[j] = new NullableCharColumn(charCol);

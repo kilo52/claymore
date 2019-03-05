@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2018 Phil Gaiser
+ * Copyright (C) 2019 Phil Gaiser
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,6 +35,16 @@ import java.util.Iterator;
  * constructor which takes a String array followed by multiple arguments of type 
  * <code>Column</code>, which creates a DataFrame composed of the given named columns.<br>
  * Column names can be created and changed at any time by calling the appropriate methods.
+ * 
+ * <p>DataFrames can also be constructed by passing a class implementing the {@link Row} 
+ * interface to the constructor. That constructor will infer all column types and names from 
+ * the fields annotated with {@link RowItem} within the provided class.<br>
+ * Consequently rows can be also retrieved, set and inserted in a similar manner. However, 
+ * please note that this feature can only be used when dealing with static DataFrames, i.e. the 
+ * defined column structure does not change at runtime. When using dynamic DataFrames with 
+ * changing column structures, then the normal way of working with rows is to use arrays of 
+ * Objects. Be aware that type safety is part of the specification and is always enforced by
+ * all DataFrame implementations.
  * 
  * <p>Most methods can throw a {@link DataFrameException} at runtime if any argument passed to
  * it is invalid, for example an out of bounds index, or if that operation would result in an
@@ -512,6 +522,25 @@ public interface DataFrame extends Cloneable, Serializable, Iterable<Column> {
 	public Object[] getRowAt(int index);
 	
 	/**
+	 * Gets the row at the specified index. This method returns a custom object implementing the
+	 * {@link Row} interface. All columns must be labeled by the time this method is called. The
+	 * class of the returned type must be provided as an argument. Passing null to the class argument
+	 * will result in a <code>NullPointerException</code>.<br>
+	 * The class implementing <code>Row</code> must properly annotate all members representing row 
+	 * items. If the class complies to the contract, a new instance of the specified type will be 
+	 * created through the default no-args constructor with all annotated fields being set to the value
+	 * of the corresponding row item.<br>
+	 * If the underlying DataFrame implementation doesn't support null values, then all annotated 
+	 * fields of the returned <code>Row</code> are guaranteed to consist of non-null values
+	 * 
+	 * @param <T> The type of the desired row
+	 * @param index The index of the row to get
+	 * @param classOfT The class of the type <b>T</b>
+	 * @return The row at the specified index as the specified type <b>T</b>
+	 */
+	public <T extends Row> T getRowAt(int index, Class<T> classOfT);
+	
+	/**
 	 * Sets and replaces the provided row within this DataFrame at the specified index.
 	 * <p>The type of each element must be equal to the type of the column it is placed in.
 	 * If the underlying DataFrame implementation doesn't support null values, then passing
@@ -522,6 +551,21 @@ public interface DataFrame extends Cloneable, Serializable, Iterable<Column> {
 	 * @param row The row to set represented as an array of Objects
 	 */
 	public void setRowAt(int index, Object[] row);
+	
+	/**
+	 * Sets and replaces the provided row within this DataFrame at the specified index.
+	 * <p>The provided row is a custom object implementing the {@link Row} interface.<br>
+	 * All columns must be labeled by the time this method is called.<br>
+	 * The class implementing <code>Row</code> must properly annotate all members representing 
+	 * row items.<br>
+	 * If the underlying DataFrame implementation doesn't support null values, then passing
+	 * a row with fields that consist of null values will result in a {@link DataFrameException}.
+	 * 
+	 * @param index The index of the row
+	 * @param row The row to set represented as a custom object implementing the 
+	 *            {@link Row} interface
+	 */
+	public void setRowAt(int index, Row row);
 	
 	/**
 	 * Adds the provided row to the end of this DataFrame. <p>The type of each element must be 
@@ -535,6 +579,20 @@ public interface DataFrame extends Cloneable, Serializable, Iterable<Column> {
 	public void addRow(Object[] row);
 	
 	/**
+	 * Adds the provided row to the end of this DataFrame.
+	 * <p>The provided row is a custom object implementing the {@link Row} interface.<br>
+	 * All columns must be labeled by the time this method is called.<br>
+	 * The class implementing <code>Row</code> must properly annotate all members representing 
+	 * row items.<br>
+	 * If the underlying DataFrame implementation doesn't support null values, then passing
+	 * a row with fields that consist of null values will result in a {@link DataFrameException}.
+	 * 
+	 * @param row The row to add represented as a custom object implementing the 
+	 *            {@link Row} interface
+	 */
+	public void addRow(Row row);
+	
+	/**
 	 * Inserts the provided row into this DataFrame at the specified index. Shifts all rows currently
 	 * at that position and any subsequent rows down (adds one to their indices). 
 	 * <p>The type of each element must be equal to the type of the column it is placed in. If the
@@ -546,6 +604,21 @@ public interface DataFrame extends Cloneable, Serializable, Iterable<Column> {
 	 * @param row The row to be inserted
 	 */
 	public void insertRowAt(int index, Object[] row);
+	
+	/**
+	 * Inserts the provided row into this DataFrame at the specified index. Shifts all rows currently
+	 * at that position and any subsequent rows down (adds one to their indices). 
+	 * <p>The provided row is a custom object implementing the {@link Row} interface.<br>
+	 * All columns must be labeled by the time this method is called.<br>
+	 * The class implementing <code>Row</code> must properly annotate all members representing 
+	 * row items.<br>
+	 * If the underlying DataFrame implementation doesn't support null values, then passing
+	 * a row with fields that consist of null values will result in a {@link DataFrameException}.
+	 * 
+	 * @param index The index at which the specified row is to be inserted
+	 * @param row The row to be inserted
+	 */
+	public void insertRowAt(int index, Row row);
 	
 	/**
 	 * Removes the row at the specified index
@@ -811,22 +884,6 @@ public interface DataFrame extends Cloneable, Serializable, Iterable<Column> {
 	 *         <br>Returns an empty DataFrame if nothing in the column matches the given regular expression
 	 */
 	public DataFrame filter(String colName, String regex);
-	
-	/**
-	 * @deprecated Renamed to {@link #filter(int, String)}.<br>
-	 *             This method has been replaced and will be removed in a future release
-	 * @param col The index of the column to search
-	 * @param regex The regular expression to search for
-	 */
-	public DataFrame findAll(int col, String regex);
-	
-	/**
-	 * @deprecated Renamed to {@link #filter(String, String)}.<br>
-	 *             This method has been replaced and will be removed in a future release
-	 * @param colName The name of the Column to search
-	 * @param regex The regular expression to search for
-	 */
-	public DataFrame findAll(String colName, String regex);
 	
 	/**
 	 * Computes the average of all entries in the specified column. If the underlying DataFrame

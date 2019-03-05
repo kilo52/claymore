@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2018 Phil Gaiser
+ * Copyright (C) 2019 Phil Gaiser
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,12 @@
 
 package com.kilo52.common.struct;
 
+import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 /**
  * DataFrame implementation using primitive wrapper objects as the underlying 
@@ -105,6 +107,58 @@ public class NullableDataFrame implements DataFrame {
 		for(int i=0; i<names.length; ++i){
 			this.names.put(names[i], i);
 		}
+	}
+	
+	/**
+	 * Constructs a new empty <code>NullableDataFrame</code> from the annotated fields in 
+	 * the specified class.<br>
+	 * The provided class must implement the {@link Row} interface. The type of each field 
+	 * annotated with {@link RowItem} will be used to determine the type of the column for
+	 * that row item. If the annotation does not specify a column name, then the identifying
+	 * name of the field will be used as the name for that column.<br>
+	 * Fields not carrying the <code>RowItem</code> annotation are ignored when creating the
+	 * column structure.<br>
+	 * Please note that the order of the constructed columns within the returned DataFrame is
+	 * not necessarily the order in which the fields in the provided class are declared
+	 * 
+	 * @param structure The class defining a row in the NullableDataFrame to be constructed, 
+	 *                  which is used to infer the column structure.
+	 *                  Must implement <code>Row</code>
+	 */
+	public NullableDataFrame(final Class<? extends Row> structure){
+		final Field[] fields = structure.getDeclaredFields();
+		if(fields.length == 0){
+			throw new DataFrameException(structure.getSimpleName()
+					+ " class does not declare any fields");
+		}
+		String[] declaredNames = new String[fields.length];
+		Column[] cols = new Column[fields.length];
+		int i = 0;
+		for(final Field field : fields){
+			final RowItem item = field.getAnnotation(RowItem.class);
+			if(item != null){
+				String name = item.value();
+				if((name == null || name.isEmpty())){
+					name = field.getName();
+				}
+				cols[i] = inferColumnFromType(field.getType());
+				declaredNames[i] = name;
+				++i;
+			}
+		}
+		if(i == 0){
+			throw new DataFrameException(structure.getSimpleName()
+					+ " class does not declare any annotated fields");
+		}
+		this.columns = new Column[i];
+		for(int j=0; j<i; ++j){
+			this.columns[j] = cols[j];
+		}
+		this.names = new HashMap<String, Integer>(16);
+		for(int j=0; j<i; ++j){
+			this.names.put(declaredNames[j], j);
+		}
+		this.next = 0;
 	}
 	
 	public Byte getByte(final int col, final int row){
@@ -627,6 +681,38 @@ public class NullableDataFrame implements DataFrame {
 		}
 		return row;
 	}
+	
+	public <T extends Row> T getRowAt(final int index, final Class<T> classOfT){
+		if(!hasColumnNames()){
+			throw new DataFrameException("Columns must be labeled in order "
+					+ "to use row annotation feature");
+		}
+		if((index >= next) || (index < 0)){
+			throw new DataFrameException("Invalid row index: "+index);
+		}
+		T row = null;
+		try{
+			row = classOfT.newInstance();
+			for(final Field field : classOfT.getDeclaredFields()){
+				final RowItem item = field.getAnnotation(RowItem.class);
+				if(item != null){
+					String name = item.value();
+					if((name == null || name.isEmpty())){
+						name = field.getName();
+					}
+					final int i = enforceName(name);
+					field.setAccessible(true);
+					field.set(row, columns[i].getValueAt(index));
+				}
+			}
+		}catch(InstantiationException ex){
+			throw new DataFrameException(classOfT.getSimpleName() 
+					+ " does not declare a default no-args constructor");
+		}catch(IllegalAccessException ex){
+			throw new DataFrameException(ex.getMessage());
+		}
+		return row;
+	}
 
 	public void setRowAt(final int index, final Object[] row){
 		if((index >= next) || (index < 0)){
@@ -637,6 +723,20 @@ public class NullableDataFrame implements DataFrame {
 			columns[i].setValueAt(index, row[i]);
 		}
 	}
+	
+	public void setRowAt(final int index, final Row row){
+		if(!hasColumnNames()){
+			throw new DataFrameException("Columns must be labeled in order "
+					+ "to use row annotation feature");
+		}
+		if((index >= next) || (index < 0)){
+			throw new DataFrameException("Invalid row index: "+index);
+		}
+		final Object[] items = itemsByAnnotations(row);
+		for(int i=0; i<items.length; ++i){
+			columns[i].setValueAt(index, items[i]);
+		}
+	}
 
 	public void addRow(final Object[] row){
 		enforceTypes(row);
@@ -645,6 +745,21 @@ public class NullableDataFrame implements DataFrame {
 		}
 		for(int i=0; i<columns.length; ++i){
 			columns[i].setValueAt(next, row[i]);
+		}
+		++next;
+	}
+	
+	public void addRow(final Row row){
+		if(!hasColumnNames()){
+			throw new DataFrameException("Columns must be labeled in order "
+					+ "to use row annotation feature");
+		}
+		if(next >= columns[0].capacity()){
+			resize();
+		}
+		final Object[] items = itemsByAnnotations(row);
+		for(int i=0; i<items.length; ++i){
+			columns[i].setValueAt(next, items[i]);
 		}
 		++next;
 	}
@@ -663,6 +778,28 @@ public class NullableDataFrame implements DataFrame {
 		}
 		for(int i=0; i<columns.length; ++i){
 			columns[i].insertValueAt(index, next, row[i]);
+		}
+		++next;
+	}
+	
+	public void insertRowAt(final int index, final Row row){
+		if(!hasColumnNames()){
+			throw new DataFrameException("Columns must be labeled in order "
+					+ "to use row annotation feature");
+		}
+		if((index > next) || (index < 0)){
+			throw new DataFrameException("Invalid row index: "+index);
+		}
+		if(index == next){
+			addRow(row);
+			return;
+		}
+		final Object[] items = itemsByAnnotations(row);
+		if(next >= columns[0].capacity()){
+			resize();
+		}
+		for(int i=0; i<items.length; ++i){
+			columns[i].insertValueAt(index, next, items[i]);
 		}
 		++next;
 	}
@@ -973,9 +1110,10 @@ public class NullableDataFrame implements DataFrame {
 		if((regex == null) || (regex.isEmpty())){
 			throw new DataFrameException("Arg must not be null");
 		}
-		final Column c = columns[col];//cache
+		final Column c = columns[col];
+		final Pattern p = Pattern.compile(regex);//cache
 		for(int i=0; i<next; ++i){
-			if(String.valueOf(c.getValueAt(i)).matches(regex)){
+			if(p.matcher(String.valueOf(c.getValueAt(i))).matches()){
 				return i;
 			}
 		}
@@ -996,9 +1134,10 @@ public class NullableDataFrame implements DataFrame {
 		if((startFrom < 0) || (startFrom >= next)){
 			throw new DataFrameException("Invalid start argument: "+startFrom);
 		}
-		final Column c = columns[col];//cache
+		final Column c = columns[col];
+		final Pattern p = Pattern.compile(regex);//cache
 		for(int i=startFrom; i<next; ++i){
-			if(String.valueOf(c.getValueAt(i)).matches(regex)){
+			if(p.matcher(String.valueOf(c.getValueAt(i))).matches()){
 				return i;
 			}
 		}
@@ -1017,10 +1156,11 @@ public class NullableDataFrame implements DataFrame {
 			throw new DataFrameException("Arg must not be null or empty");
 		}
 		final Column c = columns[col];
+		final Pattern p = Pattern.compile(regex);//cache
 		int[] res = new int[16];
 		int hits = 0;
 		for(int i=0; i<next; ++i){
-			if(String.valueOf(c.getValueAt(i)).matches(regex)){
+			if(p.matcher(String.valueOf(c.getValueAt(i))).matches()){
 				if(hits>=res.length){//resize
 					final int[] tmp = new int[res.length*2];
 					for(int j=0; j<hits; ++j){
@@ -1073,26 +1213,6 @@ public class NullableDataFrame implements DataFrame {
 	}
 	
 	public DataFrame filter(final String colName, final String regex){
-		return filter(enforceName(colName), regex);
-	}
-	
-	/**
-	 * @deprecated Renamed to {@link #filter(int, String)}.<br>
-	 * 			   This method has been replaced and will be removed in a future release
-	 * @param col The index of the column to search
-	 * @param regex The regular expression to search for
-	 */
-	public DataFrame findAll(final int col, final String regex){
-		return filter(col, regex);
-	}
-	
-	/**
-	 * @deprecated Renamed to {@link #filter(String, String)}.<br>
-	 * 			   This method has been replaced and will be removed in a future release
-	 * @param colName The name of the Column to search
-	 * @param regex The regular expression to search for
-	 */
-	public DataFrame findAll(final String colName, final String regex){
 		return filter(enforceName(colName), regex);
 	}
 	
@@ -1512,6 +1632,80 @@ public class NullableDataFrame implements DataFrame {
 	private void flushAll(final int buffer){
 		for(final Column col : columns){
 			col.matchLength(next+buffer);
+		}
+	}
+	
+	/**
+	 * Collects all annotated items from a <code>Row</code> object and returns them in an
+	 * array at the correct index for further processing
+	 * 
+	 * @param row The row to get the items from
+	 * @return An array holding the row items of the specified Row object
+	 */
+	private Object[] itemsByAnnotations(final Row row){
+		final Object[] items = new Object[columns.length];
+		for(final Field field : row.getClass().getDeclaredFields()){
+			final RowItem item = field.getAnnotation(RowItem.class);
+			if(item != null){
+				String name = item.value();
+				if((name == null || name.isEmpty())){
+					name = field.getName();
+				}
+				final int i = enforceName(name);
+				field.setAccessible(true);
+				Object value = null;
+				try{
+					value = field.get(row);
+				}catch(IllegalArgumentException | IllegalAccessException ex){
+					throw new DataFrameException(ex.getMessage());
+				}
+				if((value != null) && !value.getClass().equals(columns[i].memberClass())){
+					throw new DataFrameException(
+                            String.format("Row item %s uses an incorrect type. " 
+                            + "Expected %s but found %s", name,
+                            columns[i].memberClass().getSimpleName(), 
+                            value.getClass().getSimpleName()));
+				}
+				items[i] = value;
+			}
+		}
+		return items;
+	}
+	
+	/**
+	 * Returns an instance of the correct <code>Column</code> for the specified 
+	 * class type
+	 * 
+	 * @param classOfField The class of the field to get a column for
+	 * @return A <code>Column</code> that matches the type of the provided class
+	 */
+	private Column inferColumnFromType(final Class<?> classOfField){
+		switch(classOfField.getSimpleName()){
+		case "String":
+			return new NullableStringColumn();
+		case "Byte":
+			return new NullableByteColumn();
+		case "Short":
+			return new NullableShortColumn();
+		case "Integer":
+			return new NullableIntColumn();
+		case "Long":
+			return new NullableLongColumn();
+		case "Float":
+			return new NullableFloatColumn();
+		case "Double":
+			return new NullableDoubleColumn();
+		case "Character":
+			return new NullableCharColumn();
+		case "Boolean":
+			return new NullableBooleanColumn();
+		default:
+			throw new DataFrameException(classOfField.isPrimitive() 
+					? "NullableDataFrame does not support primitive types for row items: " 
+					    + classOfField.getSimpleName() 
+					: "Unsupported type for row item: " 
+                        + classOfField.getSimpleName());
+
 		}
 	}
 	

@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2018 Phil Gaiser
+ * Copyright (C) 2019 Phil Gaiser
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import java.io.Serializable;
 /**
  * Abstract class defining methods all columns to be used in DataFrames must implement.
  * 
+ * @author Phil Gaiser
  * 
  */
 public abstract class Column implements Cloneable, Serializable {

@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2018 Phil Gaiser
+ * Copyright (C) 2019 Phil Gaiser
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -69,6 +69,14 @@ import java.util.Set;
  *  	//handle -version arg
  * }
  * </code></pre>
+ * You may then get any argument passed to the main method's String array like this:
+ * <pre><code>
+ * int i = ap.getIntegerArg("myint", 42);
+ * String s = ap.getStringArg("mystring", "bla");
+ * boolean b = ap.getBooleanArg("mybool", true);
+ * </code></pre>
+ * The second argument in above methods specifies a default value if the corresponding
+ * command line argument is optional and was not provided.<br>
  *
  * 
  * @author Phil Gaiser
@@ -179,6 +187,21 @@ public class ArgumentParser {
 	}
 	
 	/**
+	 * Gets the integer value of the specified command line argument 
+	 * or returns the specified default value.<br>
+	 * Please note that {@link #parse} must be called prior to this method
+	 * 
+	 * @param arg The key of the command line argument to get
+	 * @param defaultValue The default value in the case the argument was unspecified
+	 * @return The integer value of the specified argument, or the default value
+	 *         if the argument was optional and not provided
+	 */
+	public int getIntegerArg(final String arg, final int defaultValue){
+		final Integer i = getIntegerArg(arg);
+		return ((i != null) ? i : defaultValue);
+	}
+	
+	/**
 	 * Gets the string value of the specified command line argument.<br>
 	 * Please note that {@link #parse} must be called prior to this method
 	 * 
@@ -189,6 +212,21 @@ public class ArgumentParser {
 	public String getStringArg(final String arg){
 		final Argument a = this.container.args.get(trim(arg));
 		return (a != null ? a.value : null);
+	}
+	
+	/**
+	 * Gets the string value of the specified command line argument 
+	 * or returns the specified default value.<br>
+	 * Please note that {@link #parse} must be called prior to this method
+	 * 
+	 * @param arg The key of the command line argument to get
+	 * @param defaultValue The default value in the case the argument was unspecified
+	 * @return The string value of the specified argument, or the default value
+	 *         if the argument was optional and not provided
+	 */
+	public String getStringArg(final String arg, final String defaultValue){
+		final String s = getStringArg(arg);
+		return ((s != null) ? s : defaultValue);
 	}
 	
 	/**
@@ -205,6 +243,21 @@ public class ArgumentParser {
 			return (a.value != null ? Boolean.valueOf(a.value) : null);
 		}
 		return null;
+	}
+	
+	/**
+	 * Gets the boolean value of the specified command line argument 
+	 * or returns the specified default value.<br>
+	 * Please note that {@link #parse} must be called prior to this method
+	 * 
+	 * @param arg The key of the command line argument to get
+	 * @param defaultValue The default value in the case the argument was unspecified
+	 * @return The boolean value of the specified argument, or the default value
+	 *         if the argument was optional and not provided
+	 */
+	public boolean getBooleanArg(final String arg, final boolean defaultValue){
+		final Boolean b = getBooleanArg(arg);
+		return ((b != null) ? b : defaultValue);
 	}
 	
 	/**

@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2018 Phil Gaiser
+ * Copyright (C) 2019 Phil Gaiser
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,7 +39,7 @@ import static com.kilo52.common.io.ConfigurationFileHandler.isComment;
  * @since 1.0.0
  *
  */
-public class ConfigurationFile implements Iterable<ConfigurationFile.Section>{
+public class ConfigurationFile implements Iterable<ConfigurationFile.Section> {
 
 	private File file;
 	private Map<String, Section> sections;
@@ -167,16 +167,7 @@ public class ConfigurationFile implements Iterable<ConfigurationFile.Section>{
 		private Map<String, String> configs;
 		private List<String> sectionContent;
 		private String name;
-
-		/**
-		 * Protected constructor returning a 
-		 * new <code>ConfigurationFile.Section</code>
-		 */
-		protected Section(){
-			this.configs = new HashMap<String, String>();
-			this.sectionContent = new LinkedList<String>();
-		}
-
+		
 		/**
 		 * Constructs a new empty <code>ConfigurationFile.Section</code>
 		 * with the specified name
@@ -186,6 +177,15 @@ public class ConfigurationFile implements Iterable<ConfigurationFile.Section>{
 		public Section(String name){
 			this();
 			this.setName(name);
+		}
+
+		/**
+		 * Protected constructor returning a 
+		 * new <code>ConfigurationFile.Section</code>
+		 */
+		protected Section(){
+			this.configs = new HashMap<String, String>();
+			this.sectionContent = new LinkedList<String>();
 		}
 
 		/**
