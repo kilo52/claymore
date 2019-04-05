@@ -123,10 +123,13 @@ public class DataFrameSerializer {
 		final BufferedInputStream is = new BufferedInputStream(new FileInputStream(file));
 		byte[] bytes = new byte[2048];
 		final ByteArrayOutputStream baos = new ByteArrayOutputStream(bytes.length);
-		while((is.read(bytes, 0, bytes.length)) != -1){
-			baos.write(bytes, 0, bytes.length);
+		try{
+			while((is.read(bytes, 0, bytes.length)) != -1){
+				baos.write(bytes, 0, bytes.length);
+			}
+		}finally{
+			is.close();
 		}
-		is.close();
 		bytes = baos.toByteArray();
 		if(bytes[0] != DF_BYTE0 || bytes[1] != DF_BYTE1){
 			throw new IOException(String.format("Is not a %s file. Starts with 0x%02X 0x%02X",
@@ -167,7 +170,7 @@ public class DataFrameSerializer {
 			throw new IOException("parallelReadFile() already called");
 		}
 		this.parallelRead = new ConcurrentDFReader(file, delegate);
-		new Thread(this.parallelRead).start();
+		this.parallelRead.execute();
 	}
 	
 	/**
@@ -193,7 +196,8 @@ public class DataFrameSerializer {
 	 * Persists the given DataFrame to the specified file
 	 * 
 	 * @param file The file to write the DataFrame to
-	 * @param df The DataFrame to persist
+	 * @param df The DataFrame to persist. Passing null to this 
+	 *           parameter will result in a NullPointerException
 	 * @throws IOException If any errors occur during serialization
 	 */
 	public void writeFile(File file, DataFrame df) throws IOException{
@@ -201,8 +205,11 @@ public class DataFrameSerializer {
 			file = new File(file.getAbsolutePath()+DF_FILE_EXTENSION);
 		}
 		final BufferedOutputStream os = new BufferedOutputStream(new FileOutputStream(file));
-		os.write(compress(serialize(df)));
-		os.close();
+		try{
+			os.write(compress(serialize(df)));
+		}finally{
+			os.close();
+		}
 	}
 	
 	/**
@@ -237,7 +244,7 @@ public class DataFrameSerializer {
 			throw new IOException("parallelWriteFile() already called");
 		}
 		this.parallelWrite = new ConcurrentDFWriter(file, df, delegate);
-		new Thread(this.parallelWrite).start();
+		this.parallelWrite.execute();
 	}
 	
 	/**
@@ -782,6 +789,13 @@ public class DataFrameSerializer {
 			this.df = df;
 			this.delegate = delegate;
 		}
+		
+		/**
+		 * Starts this Runnable in its own thread
+		 */
+		public void execute(){
+			new Thread(this).start();
+		}
 
 		@Override
 		public void run(){
@@ -791,6 +805,7 @@ public class DataFrameSerializer {
 				if(delegate != null){
 					delegate.onWritten(null);
 				}
+				return;
 			}
 			if(delegate != null){
 				delegate.onWritten(file);
@@ -816,6 +831,13 @@ public class DataFrameSerializer {
 		ConcurrentDFReader(final File file, final ConcurrentReader delegate){
 			this.file = file;
 			this.delegate = delegate;
+		}
+		
+		/**
+		 * Starts this Runnable in its own thread
+		 */
+		public void execute(){
+			new Thread(this).start();
 		}
 
 		@Override

@@ -83,7 +83,8 @@ public class CSVFileWriter {
 	 * <p>This method can only be called once. Subsequent calls will result in an
 	 * <code>IOException</code>.<br>
 	 * 
-	 * @param df The DataFrame to write to a CSV-file
+	 * @param df The DataFrame to write to a CSV-file. Passing null to this 
+	 *           parameter will result in a NullPointerException
 	 * @throws IOException If the file cannot be opened or written, or if this
 						   method has already been called
 	 */
@@ -91,30 +92,35 @@ public class CSVFileWriter {
 		if(writer == null){
 			this.writer = new BufferedWriter(new FileWriter(this.file));
 		}
-		final String nl = System.lineSeparator();
-		final int cols = df.columns();//cache
-		
-		if(df.hasColumnNames()){//add header if available
-			final String[] names = df.getColumnNames();
-			for(int i=0; i<names.length; ++i){
-				writer.write(names[i]);
-				if(i<names.length-1){
-					writer.write(separator);
+		try{
+			final String nl = System.lineSeparator();
+			final int cols = df.columns();//cache
+
+			if(df.hasColumnNames()){//add header if available
+				final String[] names = df.getColumnNames();
+				for(int i=0; i<names.length; ++i){
+					writer.write(names[i]);
+					if(i<names.length-1){
+						writer.write(separator);
+					}
 				}
+				writer.write(nl);
 			}
-			writer.write(nl);
-		}
-		for(int i=0; i<df.rows(); ++i){//add rows
-			final Object[] row = df.getRowAt(i);
-			for(int j=0; j<cols; ++j){
-				writer.write(row[j] != null ? row[j].toString() : "null");
-				if(j<cols-1){
-					writer.write(separator);
+			for(int i=0; i<df.rows(); ++i){//add rows
+				final Object[] row = df.getRowAt(i);
+				for(int j=0; j<cols; ++j){
+					writer.write(row[j] != null ? row[j].toString() : "null");
+					if(j<cols-1){
+						writer.write(separator);
+					}
 				}
+				writer.write(nl);
 			}
-			writer.write(nl);
+		}catch(RuntimeException ex){
+			throw new IOException(ex);
+		}finally{
+			writer.close();
 		}
-		writer.close();
 	}
 	
 	/**
@@ -140,7 +146,7 @@ public class CSVFileWriter {
 			throw new IOException("parallelWrite() already called");
 		}
 		this.parallel = new ConcurrentCSVWriter(df, delegate);
-		new Thread(this.parallel).start();
+		this.parallel.execute();
 	}
 	
 	/**
@@ -196,6 +202,13 @@ public class CSVFileWriter {
 			this.df = df;
 			this.delegate = delegate;
 		}
+		
+		/**
+		 * Starts this Runnable in its own thread
+		 */
+		public void execute(){
+			new Thread(this).start();
+		}
 
 		@Override
 		public void run(){
@@ -205,6 +218,7 @@ public class CSVFileWriter {
 				if(delegate != null){
 					delegate.onWritten(null);
 				}
+				return;
 			}
 			
 			if(delegate != null){

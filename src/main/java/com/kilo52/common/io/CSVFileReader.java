@@ -200,63 +200,82 @@ public class CSVFileReader {
 	 * <p>Resources will be closed automatically before this method returns
 	 * 
 	 * @return A DataFrame holding the content of the CSV-file read
-	 * @throws IOException If the file cannot be opened or read, or if this
-						   method has already been called
+	 * @throws IOException If the file cannot be opened or read, if this
+	 *                     method has already been called, or if the file 
+	 *                     content is improperly formatted
 	 */
 	public DataFrame read() throws IOException{
 		DataFrame df = new DefaultDataFrame();
 		String line = "";
-		if(types != null){
-			for(int i=0; i<types.length; ++i){
-				df.addColumn(types[i]);
-			}
-			if(hasHeader){
-				String[] header = reader.readLine().split(separator);
-				df.setColumnNames(header);
-			}
-			while((line = reader.readLine()) != null){
-				final String[] blocks = line.split(separator);
-				final Object[] converted = new Object[blocks.length];
-				for(int i=0; i<blocks.length; ++i){
-					converted[i] = convertType(i, blocks[i]);
+		int lineIndex = 0;
+		try{
+			if(types != null){
+				for(int i=0; i<types.length; ++i){
+					df.addColumn(types[i]);
 				}
-				try{
-					df.addRow(converted);
-				}catch(DataFrameException ex){//null value in row
-					df = DataFrame.convert(df, NullableDataFrame.class);
-					df.addRow(converted);
+				if(hasHeader){
+					String[] header = reader.readLine().split(separator);
+					df.setColumnNames(header);
+					++lineIndex;
 				}
-			}
-		}else{
-			if(hasHeader){
-				String[] header = reader.readLine().split(separator);
-				for(int i=0; i<header.length; ++i){
-					df.addColumn(new StringColumn());
-				}
-				df.setColumnNames(header);
-			}else{
-				String[] first = reader.readLine().split(separator);
-				for(int i=0; i<first.length; ++i){
-					df.addColumn(new StringColumn());
-				}
-				df.addRow(first);
-			}
-			while((line = reader.readLine()) != null){
-				final String[] blocks = line.split(separator);
-				for(int i=0; i<blocks.length; ++i){
-					if(blocks[i].equals("null")){
-						blocks[i] = null;
+				while((line = reader.readLine()) != null){
+					++lineIndex;
+					if(line.isEmpty()){//skip empty lines
+						continue;
+					}
+					final String[] blocks = line.split(separator);
+					final Object[] converted = new Object[blocks.length];
+					for(int i=0; i<blocks.length; ++i){
+						converted[i] = convertType(i, blocks[i]);
+					}
+					try{
+						df.addRow(converted);
+					}catch(DataFrameException ex){//null value in row
+						df = DataFrame.convert(df, NullableDataFrame.class);
+						df.addRow(converted);
 					}
 				}
-				try{
-					df.addRow(blocks);
-				}catch(DataFrameException ex){//null value in row
-					df = DataFrame.convert(df, NullableDataFrame.class);
-					df.addRow(blocks);
+			}else{
+				if(hasHeader){
+					String[] header = reader.readLine().split(separator);
+					for(int i=0; i<header.length; ++i){
+						df.addColumn(new StringColumn());
+					}
+					df.setColumnNames(header);
+				}else{
+					String[] first = reader.readLine().split(separator);
+					for(int i=0; i<first.length; ++i){
+						df.addColumn(new StringColumn());
+					}
+					df.addRow(first);
+				}
+				++lineIndex;
+				while((line = reader.readLine()) != null){
+					++lineIndex;
+					if(line.isEmpty()){//skip empty lines
+						continue;
+					}
+					final String[] blocks = line.split(separator);
+					for(int i=0; i<blocks.length; ++i){
+						if(blocks[i].equals("null")){
+							blocks[i] = null;
+						}
+					}
+					try{
+						df.addRow(blocks);
+					}catch(DataFrameException ex){//null value in row
+						df = DataFrame.convert(df, NullableDataFrame.class);
+						df.addRow(blocks);
+					}
 				}
 			}
+		}catch(RuntimeException ex){
+			throw new IOException(String.format(
+					"Improperly formatted CSV file at line: %s", lineIndex), ex);
+			
+		}finally{
+			this.reader.close();
 		}
-		this.reader.close();
 		return df;
 	}
 	
@@ -282,7 +301,7 @@ public class CSVFileReader {
 			throw new IOException("parallelRead() already called");
 		}
 		this.parallel = new ConcurrentCSVReader(delegate);
-		new Thread(this.parallel).start();
+		this.parallel.execute();
 	}
 	
 	/**
@@ -447,6 +466,13 @@ public class CSVFileReader {
 		 */
 		ConcurrentCSVReader(final ConcurrentReader delegate){
 			this.delegate = delegate;
+		}
+		
+		/**
+		 * Starts this Runnable in its own thread
+		 */
+		public void execute(){
+			new Thread(this).start();
 		}
 
 		@Override

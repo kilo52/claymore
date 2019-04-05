@@ -68,13 +68,16 @@ public class PropertiesFileHandler {
 		final PropertiesFile properties = new PropertiesFile();
 		final BufferedReader reader = new BufferedReader(new FileReader(file));
 		String line = "";
-		while((line = reader.readLine()) != null){
-			if(!isCommentedLine(line) && !line.isEmpty()){
-				final String[] block = line.split("=", 2);
-				properties.setProperty(block[0], (block.length < 2 ? null : block[1]));
+		try{
+			while((line = reader.readLine()) != null){
+				if(!isCommentedLine(line) && !line.isEmpty()){
+					final String[] block = line.split("=", 2);
+					properties.setProperty(block[0], (block.length < 2 ? null : block[1]));
+				}
 			}
+		}finally{
+			reader.close();
 		}
-		reader.close();
 		properties.setFile(this.file);
 		return properties;
 	}
@@ -89,11 +92,14 @@ public class PropertiesFileHandler {
 		final BufferedWriter writer = new BufferedWriter(new FileWriter(this.file));
 		final String nl = System.lineSeparator();
 		final Iterator<Map.Entry<String, String>> iter = properties.allProperties().iterator();
-		while(iter.hasNext()){
-			final Map.Entry<String, String> e = iter.next();
-			writer.write(e.getKey()+"="+e.getValue()+nl);
+		try{
+			while(iter.hasNext()){
+				final Map.Entry<String, String> e = iter.next();
+				writer.write(e.getKey()+"="+e.getValue()+nl);
+			}
+		}finally{
+			writer.close();
 		}
-		writer.close();
 	}
 	
 	/**

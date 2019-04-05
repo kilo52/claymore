@@ -75,36 +75,39 @@ public class ConfigurationFileHandler {
 		Section section = new Section();
 		boolean inSection = false;
 		int i = 0;
-		while((line = reader.readLine()) != null){
-			++i;
-			if(inSection){
-				if(isComment(line)){
-					section.addComment(line);;
-				}else if(isSection(line)){
-					configs.addSection(section);
-					section = new Section(trim(line, i));
+		try{
+			while((line = reader.readLine()) != null){
+				++i;
+				if(inSection){
+					if(isComment(line)){
+						section.addComment(line);;
+					}else if(isSection(line)){
+						configs.addSection(section);
+						section = new Section(trim(line, i));
+					}else{
+						final String[] block = line.split("=", 2);
+						section.set(block[0], (block.length < 2 ? null : block[1]));
+					}
 				}else{
-					final String[] block = line.split("=", 2);
-					section.set(block[0], (block.length < 2 ? null : block[1]));
-				}
-			}else{
-				if(isComment(line)){
-					configs.addComment(line);
-				}else if(isSection(line)){
-					section = new Section(trim(line, i));
-					inSection = true;
-				}else{
-					reader.close();
-					throw new IOException(String.format(
-							"Improperly formatted configuration file: '%s' (at line %s)",
-							line, i));
+					if(isComment(line)){
+						configs.addComment(line);
+					}else if(isSection(line)){
+						section = new Section(trim(line, i));
+						inSection = true;
+					}else{
+						reader.close();
+						throw new IOException(String.format(
+								"Improperly formatted configuration file: '%s' (at line %s)",
+								line, i));
+					}
 				}
 			}
+			if(inSection){
+				configs.addSection(section);
+			}
+		}finally{
+			reader.close();
 		}
-		if(inSection){
-			configs.addSection(section);
-		}
-		reader.close();
 		configs.setFile(this.file);
 		return configs;
 	}
@@ -117,8 +120,11 @@ public class ConfigurationFileHandler {
 	 */
 	public void write(final ConfigurationFile config) throws IOException{
 		final BufferedWriter writer = new BufferedWriter(new FileWriter(this.file));
-		writer.write(config.toString());
-		writer.close();
+		try{
+			writer.write(config.toString());
+		}finally{
+			writer.close();
+		}
 	}
 	
 	/**

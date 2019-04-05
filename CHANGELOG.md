@@ -1,3 +1,10 @@
+#### 2.0.2
+* Added code to properly close resources in *CSVFileReader*, *CSVFileWriter*, *DataFrameSerializer* and all FileHandlers
+* Improved behaviour of *CSVFileReader*, causing it to skip empty lines in CSV files instead of throwing an exception
+* Fixed crash for *ConcurrentCSVReader* threads when encountering an uncaught exception
+* Minor refactoring of code for starting background threads in *CSVFileReader*, *CSVFileWriter* and *DataFrameSerializer*
+* Improved error messages for IOExceptions caused by improperly formatted CSV files
+
 #### 2.0.0
 * Added *Row* interface and *RowItem* annotation
 * Added methods to the DataFrame API to allow row operations with custom classes implementing the *Row* marker interface and annotating fields with *@RowItem*
